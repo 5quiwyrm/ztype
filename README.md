@@ -1,7 +1,7 @@
 # ztype
-A magic analyser inspired by typingscript2, written in Zig
+A magic analyser inspired by mana, written in Zig
 
-Fork of (typingscript2)[https://github.com/Zakkkk/typingscript2], all credits to (Zakkkk)[https://github.com/Zakkkk].
+Fork of [mana](https://github.com/Zakkkk/mana), all credits to [Zakkkk](https://github.com/Zakkkk).
 
 ## Usage
 
