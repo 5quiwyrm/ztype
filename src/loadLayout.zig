@@ -5,12 +5,18 @@ pub const SaveOptions = struct {
     overwrite: bool = false,
 };
 
+pub const MagicRule = [2]u8;
+pub const statError = error{
+    LetterNotFound,
+    BadNGramLen,
+};
+
 pub const Layout = struct {
     name: []const u8,
     rows: []const []const u8,
     fingermap: []const []const u8,
-    magicTriggers: ?[]const []const u8,
-    magicResults: ?[]const []const u8,
+    magicrules: ?[]const MagicRule,
+    magicchar: u8,
 
     pub fn save(self: *const Layout, args: SaveOptions) !void {
         const layout_path = try allocator.alloc(u8, self.name.len + 5);
@@ -21,8 +27,35 @@ pub const Layout = struct {
         layout_path[self.name.len + 3] = 'o';
         layout_path[self.name.len + 4] = 'n';
         const layout_dir = try std.fs.cwd().openDir("layouts", .{});
-        const layout_file = try layout_dir.createFile(layout_path, .{ .exclusive = args.overwrite });
+        const layout_file = try layout_dir.createFile(layout_path, .{ .exclusive = !args.overwrite });
         _ = try std.json.stringify(self, .{}, layout_file.writer());
+    }
+
+    /// Returns an error if letter isn't found.
+    pub fn getFinger(self: *const Layout, letter: u8) !u8 {
+        for (0..self.rows.len) |rowN| {
+            const row = self.rows[rowN];
+            if (std.mem.containsAtLeast(u8, row, 1, &.{letter})) {
+                const idx = std.mem.indexOf(u8, row, &.{letter});
+                return self.fingermap[rowN][idx];
+            }
+        }
+        return statError.LetterNotFound;
+    }
+
+    /// Returns an error if the letter isn't found.
+    pub fn getRow(self: *const Layout, letter: u8) !u8 {
+        for (0..self.rows.len) |rowN| {
+            if (std.mem.containsAtLeast(u8, self.rows[rowN], 1, &.{letter})) {
+                return rowN;
+            }
+        }
+        return statError.LetterNotFound;
+    }
+
+    pub fn isSfb(self: *const Layout, bigram: []const u8) !bool {
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (bigram[0] != bigram[1]) and (self.getFinger(bigram[0]) == self.getFinger(bigram[1]));
     }
 };
 
@@ -59,14 +92,12 @@ test "makekuntum" {
             &.{ 'z', 'x', 'p', 'b', '\'', 'm', 'y', 'q', '/', '.' },
         },
         .fingermap = &.{
-            &.{ 0, 1, 2, 3, 3, 4, 4, 5, 6, 7 },
-            &.{ 0, 1, 2, 3, 3, 4, 4, 5, 6, 7 },
-            &.{ 1, 2, 3, 3, 3, 4, 4, 5, 6, 7 },
+            &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
+            &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
+            &.{ 1, 2, 3, 3, 3, 6, 6, 7, 8, 9 },
         },
-        .magicTriggers = null,
-        .magicResults = null,
+        .magicrules = &.{[2]u8{ 'q', 'u' }},
+        .magicchar = '*',
     };
-    try kuntum.save(.{});
-    const sturdy = try loadLayout("sturdy");
-    std.debug.print("{any}\n", .{sturdy});
+    try kuntum.save(.{ .overwrite = true });
 }
