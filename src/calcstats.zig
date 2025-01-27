@@ -334,11 +334,24 @@ pub const Stats = struct {
         std.debug.print("Layout: {s}\n", .{self.layout.name});
         for (self.layout.rows) |row| {
             for (row) |ch| {
-                std.debug.print("{c} ", .{ch});
+                switch (ch) {
+                    ' ' => {
+                        std.debug.print("_ ", .{});
+                    },
+                    else => {
+                        std.debug.print("{c} ", .{ch});
+                    },
+                }
             }
             std.debug.print("\n", .{});
         }
-        std.debug.print("Corpus: {s}\n\nOut of 10000:\n\n", .{self.corpusname});
+        if (self.layout.magicrules != null) {
+            std.debug.print("Rules:\n", .{});
+            for (self.layout.magicrules.?) |rule| {
+                std.debug.print("{s}\n", .{rule});
+            }
+        }
+        std.debug.print("\nCorpus: {s}\n\nOut of 10000:\n\n", .{self.corpusname});
         std.debug.print("SFB: {} | ", .{@as(i32, @intFromFloat(self.SFBtotal * 10000))});
         std.debug.print("SFS: {} | ", .{@as(i32, @intFromFloat(self.DSFBtotal * 10000))});
         std.debug.print("SFR: {}\n", .{@as(i32, @intFromFloat(self.SFRtotal * 10000))});
@@ -357,8 +370,11 @@ pub const Stats = struct {
 };
 
 pub fn main() !void {
-    const layout = try loadlayout.loadLayout("kuntum");
+    const layout = try loadlayout.loadLayout("whirl");
     const grams = try parsecorpus.loadCorpus(layout, "e10k");
     const stats = try Stats.init(layout, grams);
     try stats.print(.{});
+    for (stats.SFB) |big| {
+        std.debug.print("{s}\n", .{big.word});
+    }
 }

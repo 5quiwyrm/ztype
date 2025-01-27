@@ -178,17 +178,27 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
                 try bigrams.put(try allocator.dupe(u8, bgrm.word[1..]), 1);
             }
             continue;
-        }
-        magic: for (layout.magicrules.?) |rule| {
-            var app: [3]u8 = undefined;
-            const repl = std.mem.replace(u8, bgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
-            if (bigrams.getPtr(app[1..])) |valueptr| {
-                valueptr.* += bgrm.freq;
-            } else {
-                try bigrams.put(try allocator.dupe(u8, app[1..]), 1);
+        } else {
+            var magicked: bool = false;
+            magic: for (layout.magicrules.?) |rule| {
+                var app: [3]u8 = undefined;
+                const repl = std.mem.replace(u8, bgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
+                if (repl > 0) {
+                    if (bigrams.getPtr(app[1..])) |valueptr| {
+                        valueptr.* += bgrm.freq;
+                    } else {
+                        try bigrams.put(try allocator.dupe(u8, app[1..]), 1);
+                    }
+                    magicked = true;
+                    break :magic;
+                }
             }
-            if (repl > 0) {
-                break :magic;
+            if (!magicked) {
+                if (bigrams.getPtr(bgrm.word[1..])) |valueptr| {
+                    valueptr.* += bgrm.freq;
+                } else {
+                    try bigrams.put(try allocator.dupe(u8, bgrm.word[1..]), 1);
+                }
             }
         }
     }
@@ -203,17 +213,27 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
                 try trigrams.put(try allocator.dupe(u8, tgrm.word[1..]), 1);
             }
             continue;
-        }
-        magic: for (layout.magicrules.?) |rule| {
-            var app: [4]u8 = undefined;
-            const repl = std.mem.replace(u8, tgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
-            if (trigrams.getPtr(app[1..])) |valueptr| {
-                valueptr.* += tgrm.freq;
-            } else {
-                try trigrams.put(try allocator.dupe(u8, app[1..]), 1);
+        } else {
+            var magicked: bool = false;
+            magic: for (layout.magicrules.?) |rule| {
+                var app: [4]u8 = undefined;
+                const repl = std.mem.replace(u8, tgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
+                if (repl > 0) {
+                    if (trigrams.getPtr(app[1..])) |valueptr| {
+                        valueptr.* += tgrm.freq;
+                    } else {
+                        try trigrams.put(try allocator.dupe(u8, app[1..]), 1);
+                    }
+                    magicked = true;
+                    break :magic;
+                }
             }
-            if (repl > 0) {
-                break :magic;
+            if (!magicked) {
+                if (trigrams.getPtr(tgrm.word[1..])) |valueptr| {
+                    valueptr.* += tgrm.freq;
+                } else {
+                    try trigrams.put(try allocator.dupe(u8, tgrm.word[1..]), 1);
+                }
             }
         }
     }

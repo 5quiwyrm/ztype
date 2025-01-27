@@ -168,20 +168,20 @@ pub fn loadLayout(layoutname: []const u8) !Layout {
 
 test "makekuntum" {
     const sturdy = Layout{
-        .name = &.{ 's', 't', 'u', 'r', 'd', 'y' },
+        .name = &.{ 'w', 'h', 'i', 'r', 'l' },
         .rows = &.{
-            &.{ 'v', 'm', 'l', 'c', 'p', 'x', 'f', 'o', 'u', 'j' },
-            &.{ 's', 't', 'r', 'd', 'y', '.', 'n', 'a', 'e', 'i' },
-            &.{ 'z', 'k', 'x', 'g', 'w', 'b', 'h', '\'', ';', ',' },
-            &.{' '},
+            &.{ 'q', 'g', 'd', 'f', 'v', 'z', 'l', 'u', 'o', 'y' },
+            &.{ 'n', 's', 't', 'h', 'm', '\'', 'r', 'e', 'a', 'i' },
+            &.{ 'b', 'c', 'p', 'w', 'k', 'x', 'j', ';', '.', ',' },
+            &.{ ' ', '*' },
         },
         .fingermap = &.{
             &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
             &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
             &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
-            &.{4},
+            &.{ 4, 5 },
         },
-        .magicrules = null,
+        .magicrules = &.{ "wh".*, "y,".*, "gs".*, "sc".* },
         .magicchar = '*',
     };
     try sturdy.save(.{ .overwrite = true });
