@@ -32,30 +32,113 @@ pub const Layout = struct {
     }
 
     /// Returns an error if letter isn't found.
-    pub fn getFinger(self: *const Layout, letter: u8) !u8 {
+    pub fn getFinger(self: *const Layout, letter: u8) !i8 {
         for (0..self.rows.len) |rowN| {
             const row = self.rows[rowN];
             if (std.mem.containsAtLeast(u8, row, 1, &.{letter})) {
-                const idx = std.mem.indexOf(u8, row, &.{letter});
-                return self.fingermap[rowN][idx];
+                const idx = std.mem.indexOf(u8, row, &.{letter}).?;
+                return @as(i8, @intCast(self.fingermap[rowN][idx]));
             }
         }
         return statError.LetterNotFound;
+    }
+
+    /// true = right, false = left
+    /// Returns an error if the letter isn't found.
+    pub fn getHand(self: *const Layout, letter: u8) !bool {
+        return ((try self.getFinger(letter)) <= 5);
     }
 
     /// Returns an error if the letter isn't found.
-    pub fn getRow(self: *const Layout, letter: u8) !u8 {
+    pub fn getRow(self: *const Layout, letter: u8) !i8 {
         for (0..self.rows.len) |rowN| {
             if (std.mem.containsAtLeast(u8, self.rows[rowN], 1, &.{letter})) {
-                return rowN;
+                return @as(i8, @intCast(rowN));
             }
         }
         return statError.LetterNotFound;
     }
 
-    pub fn isSfb(self: *const Layout, bigram: []const u8) !bool {
+    pub fn isThumb(self: *const Layout, letter: u8) !bool {
+        const finger = try self.getFinger(letter);
+        return (finger == 4) or (finger == 5);
+    }
+
+    pub fn isSFB(self: *const Layout, bigram: []const u8) !bool {
         if (bigram.len != 2) return statError.BadNGramLen;
-        return (bigram[0] != bigram[1]) and (self.getFinger(bigram[0]) == self.getFinger(bigram[1]));
+        return (bigram[0] != bigram[1]) and ((try self.getFinger(bigram[0])) == (try self.getFinger(bigram[1])));
+    }
+
+    pub fn isSFR(self: *const Layout, bigram: []const u8) !bool {
+        _ = self;
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (bigram[0] == bigram[1]);
+    }
+
+    pub fn isFSB(self: *const Layout, bigram: []const u8) !bool {
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (@abs((try self.getFinger(bigram[1])) - (try self.getFinger(bigram[0]))) == 1) and (@abs((try self.getRow(bigram[1])) - (try self.getRow(bigram[0]))) == 2);
+    }
+
+    pub fn isHSB(self: *const Layout, bigram: []const u8) !bool {
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (@abs((try self.getFinger(bigram[1])) - (try self.getFinger(bigram[0]))) == 1) and (@abs((try self.getRow(bigram[1])) - (try self.getRow(bigram[0]))) == 1);
+    }
+
+    pub fn isDSFB(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return (trigram[0] != trigram[2]) and (try self.getFinger(trigram[0]) == try self.getFinger(trigram[2]));
+    }
+
+    pub fn isDSFR(self: *const Layout, trigram: []const u8) !bool {
+        _ = self;
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return (trigram[0] == trigram[2]);
+    }
+
+    pub fn isAlt(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return (((try self.getHand(trigram[0])) != (try self.getHand(trigram[1]))) and ((try self.getHand(trigram[1])) != (try self.getHand(trigram[2]))));
+    }
+
+    pub fn isRed(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return ((((try self.getHand(trigram[0])) == (try self.getHand(trigram[1]))) and ((try self.getHand(trigram[1])) == (try self.getHand(trigram[2])))) and (((try self.getFinger(trigram[0])) != (try self.getFinger(trigram[1]))) and ((try self.getFinger(trigram[1])) != (try self.getFinger(trigram[2])))) and (((try self.getFinger(trigram[0])) < (try self.getFinger(trigram[1]))) != ((try self.getFinger(trigram[1])) < (try self.getFinger(trigram[2])))) and (!(try self.isThumb(trigram[0])) and !(try self.isThumb(trigram[1])) and !(try self.isThumb(trigram[2]))));
+    }
+
+    pub fn isOneh(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return (((try self.getHand(trigram[0])) == (try self.getHand(trigram[1]))) and ((try self.getHand(trigram[1])) == (try self.getHand(trigram[2]))));
+    }
+
+    pub fn isBigramInroll(self: *const Layout, bigram: []const u8) !bool {
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (((try self.getHand(bigram[0])) == (try self.getHand(bigram[1]))) and (((try self.getFinger(bigram[0])) < (try self.getFinger(bigram[1]))) == (try self.getHand(bigram[0]))));
+    }
+
+    pub fn isInroll(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return ((!(try self.isOneh(trigram))) and ((try self.isBigramInroll(trigram[0..2])) or (try self.isBigramInroll(trigram[1..]))));
+    }
+
+    pub fn isIn3roll(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return ((try self.isOneh(trigram)) and (((try self.getFinger(trigram[0])) > (try self.getFinger(trigram[1]))) and ((try self.getFinger(trigram[1])) > (try self.getFinger(trigram[2]))) != (try self.getHand(trigram[0]))));
+    }
+
+    pub fn isBigramOutroll(self: *const Layout, bigram: []const u8) !bool {
+        if (bigram.len != 2) return statError.BadNGramLen;
+        return (((try self.getHand(bigram[0])) == (try self.getHand(bigram[1]))) and (((try self.getFinger(bigram[0])) < (try self.getFinger(bigram[1]))) != (try self.getHand(bigram[0]))));
+    }
+
+    pub fn isOutroll(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return ((!(try self.isOneh(trigram))) and ((try self.isBigramOutroll(trigram[0..2])) or (try self.isBigramOutroll(trigram[1..]))));
+    }
+
+    pub fn isOut3roll(self: *const Layout, trigram: []const u8) !bool {
+        if (trigram.len != 3) return statError.BadNGramLen;
+        return ((try self.isOneh(trigram)) and (((try self.getFinger(trigram[0])) > (try self.getFinger(trigram[1]))) and ((try self.getFinger(trigram[1])) > (try self.getFinger(trigram[2]))) == (try self.getHand(trigram[0]))));
     }
 };
 
@@ -84,20 +167,22 @@ pub fn loadLayout(layoutname: []const u8) !Layout {
 }
 
 test "makekuntum" {
-    const kuntum = Layout{
-        .name = &.{ 'k', 'u', 'n', 't', 'u', 'm' },
+    const sturdy = Layout{
+        .name = &.{ 's', 't', 'u', 'r', 'd', 'y' },
         .rows = &.{
-            &.{ 'v', 'l', 'n', 'd', 'k', 'j', 'w', 'o', 'u', ',' },
-            &.{ 't', 's', 'r', 'h', 'f', 'g', 'c', 'a', 'e', 'i' },
-            &.{ 'z', 'x', 'p', 'b', '\'', 'm', 'y', 'q', '/', '.' },
+            &.{ 'v', 'm', 'l', 'c', 'p', 'x', 'f', 'o', 'u', 'j' },
+            &.{ 's', 't', 'r', 'd', 'y', '.', 'n', 'a', 'e', 'i' },
+            &.{ 'z', 'k', 'x', 'g', 'w', 'b', 'h', '\'', ';', ',' },
+            &.{' '},
         },
         .fingermap = &.{
             &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
             &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
-            &.{ 1, 2, 3, 3, 3, 6, 6, 7, 8, 9 },
+            &.{ 0, 1, 2, 3, 3, 6, 6, 7, 8, 9 },
+            &.{4},
         },
-        .magicrules = &.{[2]u8{ 'q', 'u' }},
+        .magicrules = null,
         .magicchar = '*',
     };
-    try kuntum.save(.{ .overwrite = true });
+    try sturdy.save(.{ .overwrite = true });
 }
