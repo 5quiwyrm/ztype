@@ -374,7 +374,4 @@ pub fn main() !void {
     const grams = try parsecorpus.loadCorpus(layout, "e10k");
     const stats = try Stats.init(layout, grams);
     try stats.print(.{});
-    for (stats.SFB) |big| {
-        std.debug.print("{s}\n", .{big.word});
-    }
 }
