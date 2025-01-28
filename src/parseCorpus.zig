@@ -124,6 +124,7 @@ pub const Ngrams = struct {
 };
 
 pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
+    const start = try std.time.Instant.now();
     var parsed_dir = try std.fs.cwd().openDir("parsed", .{});
     defer parsed_dir.close();
     const parsed_path = try allocator.alloc(u8, corpusname.len + 5);
@@ -141,103 +142,156 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
     const corpusval = corpus_parsed.value;
     const skipmagic = (layout.magicrules == null);
     var monograms = std.StringHashMap(u32).init(allocator); // no need to deinit
+    const corpustime = try std.time.Instant.now();
+    std.debug.print("corpus time:    {}ns\n", .{corpustime.since(start)});
     for (corpusval.extended_monograms) |mgrm| {
         if (skipmagic) {
             if (monograms.getPtr(mgrm.word[1..])) |valueptr| {
                 valueptr.* += mgrm.freq;
             } else {
-                try monograms.put(mgrm.word[1..], 1);
+                try monograms.put(mgrm.word[1..], mgrm.freq);
             }
-            continue;
-        }
-        magic: for (layout.magicrules.?) |rule| {
-            if (std.mem.eql(u8, mgrm.word, rule[0..])) {
-                if (monograms.getPtr(&.{layout.magicchar})) |valueptr| {
-                    valueptr.* += mgrm.freq;
-                } else {
-                    try monograms.put(&.{layout.magicchar}, 1);
+        } else {
+            var app = try allocator.dupe(u8, mgrm.word[1..]);
+            if (!layout.repeat) {
+                var magicked = false;
+                magic: for (layout.magicrules.?) |rule| {
+                    if (mgrm.word[0] == rule[0] and mgrm.word[1] == rule[1]) {
+                        if (monograms.getPtr(&.{'*'})) |valueptr| {
+                            valueptr.* += mgrm.freq;
+                        } else {
+                            try monograms.put(&.{'*'}, mgrm.freq);
+                        }
+                        magicked = true;
+                        break :magic;
+                    }
                 }
-                break :magic;
+                if (!magicked) {
+                    if (monograms.getPtr(mgrm.word[1..])) |valueptr| {
+                        valueptr.* += mgrm.freq;
+                    } else {
+                        try monograms.put(mgrm.word[1..], mgrm.freq);
+                    }
+                }
             } else {
-                if (monograms.getPtr(mgrm.word[1..])) |valueptr| {
+                if (mgrm.word[1] == layout.magicrules.?[mgrm.word[0] - 'a'][1] and mgrm.word[0] >= 'a' and mgrm.word[0] <= 'z') {
+                    app[0] = layout.magicchar;
+                }
+                if (monograms.getPtr(app[0..])) |valueptr| {
                     valueptr.* += mgrm.freq;
                 } else {
-                    try monograms.put(try allocator.dupe(u8, mgrm.word[1..]), 1);
+                    try monograms.put(app[0..], mgrm.freq);
                 }
             }
         }
     }
-    const m = try WordCount.FromHashMap(monograms);
-    monograms.deinit();
+    const monogramtime = try std.time.Instant.now();
+    std.debug.print("Monograms time: {}ns\n", .{monogramtime.since(corpustime)});
     var bigrams = std.StringHashMap(u32).init(allocator); // no need to deinit
     for (corpusval.extended_bigrams) |bgrm| {
         if (skipmagic) {
             if (bigrams.getPtr(bgrm.word[1..])) |valueptr| {
                 valueptr.* += bgrm.freq;
             } else {
-                try bigrams.put(try allocator.dupe(u8, bgrm.word[1..]), 1);
+                try bigrams.put(try allocator.dupe(u8, bgrm.word[1..]), bgrm.freq);
             }
-            continue;
         } else {
-            var magicked: bool = false;
-            magic: for (layout.magicrules.?) |rule| {
-                var app: [3]u8 = undefined;
-                const repl = std.mem.replace(u8, bgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
-                if (repl > 0) {
-                    if (bigrams.getPtr(app[1..])) |valueptr| {
-                        valueptr.* += bgrm.freq;
-                    } else {
-                        try bigrams.put(try allocator.dupe(u8, app[1..]), 1);
+            var app = try allocator.dupe(u8, bgrm.word);
+            if (!layout.repeat) {
+                var num_mag: u8 = 0;
+                magic: for (layout.magicrules.?) |rule| {
+                    if (app[0] == rule[0] and app[1] == rule[1]) {
+                        app[1] = layout.magicchar;
+                        num_mag += 1;
                     }
-                    magicked = true;
-                    break :magic;
+                    if (app[1] == rule[0] and app[2] == rule[1]) {
+                        app[2] = layout.magicchar;
+                        num_mag += 1;
+                    }
+                    if (num_mag > 0) break :magic;
+                }
+            } else {
+                if (app[0] >= 'a' and app[0] <= 'z') {
+                    if (app[1] == layout.magicrules.?[app[0] - 'a'][1]) {
+                        app[1] = layout.magicchar;
+                    }
+                } else {
+                    if (app[1] >= 'a' and app[1] <= 'z') {
+                        if (app[2] == layout.magicrules.?[app[1] - 'a'][1]) {
+                            app[2] = layout.magicchar;
+                        }
+                    }
                 }
             }
-            if (!magicked) {
-                if (bigrams.getPtr(bgrm.word[1..])) |valueptr| {
-                    valueptr.* += bgrm.freq;
-                } else {
-                    try bigrams.put(try allocator.dupe(u8, bgrm.word[1..]), 1);
-                }
+            if (bigrams.getPtr(app[1..3])) |valueptr| {
+                valueptr.* += bgrm.freq;
+            } else {
+                try bigrams.put(app[1..3], bgrm.freq);
             }
         }
     }
-    const b = try WordCount.FromHashMap(bigrams);
-    bigrams.deinit();
+    const bigramtime = try std.time.Instant.now();
+    std.debug.print("Bigrams time:   {}ns\n", .{bigramtime.since(monogramtime)});
     var trigrams = std.StringHashMap(u32).init(allocator); // no need to deinit
     for (corpusval.extended_trigrams) |tgrm| {
         if (skipmagic) {
             if (trigrams.getPtr(tgrm.word[1..])) |valueptr| {
                 valueptr.* += tgrm.freq;
             } else {
-                try trigrams.put(try allocator.dupe(u8, tgrm.word[1..]), 1);
+                try trigrams.put(try allocator.dupe(u8, tgrm.word[1..]), tgrm.freq);
             }
-            continue;
         } else {
-            var magicked: bool = false;
-            magic: for (layout.magicrules.?) |rule| {
-                var app: [4]u8 = undefined;
-                const repl = std.mem.replace(u8, tgrm.word, rule[0..], &.{ rule[0], layout.magicchar }, app[0..]);
-                if (repl > 0) {
-                    if (trigrams.getPtr(app[1..])) |valueptr| {
-                        valueptr.* += tgrm.freq;
-                    } else {
-                        try trigrams.put(try allocator.dupe(u8, app[1..]), 1);
+            var app = try allocator.dupe(u8, tgrm.word);
+            if (!layout.repeat) {
+                var num_mag: u8 = 0;
+                magic: for (layout.magicrules.?) |rule| {
+                    if (app[0] == rule[0] and app[1] == rule[1]) {
+                        app[1] = layout.magicchar;
+                        num_mag += 1;
                     }
-                    magicked = true;
-                    break :magic;
+                    if (app[2] == rule[0] and app[3] == rule[1]) {
+                        app[3] = layout.magicchar;
+                        num_mag += 1;
+                    }
+                    if (app[1] == rule[0] and app[2] == rule[1]) {
+                        app[2] = layout.magicchar;
+                        num_mag += 2;
+                    }
+                    if (num_mag > 1) break :magic;
+                }
+            } else {
+                if (app[0] >= 'a' and app[0] <= 'z') {
+                    if (app[1] == layout.magicrules.?[app[0] - 'a'][1]) {
+                        app[1] = layout.magicchar;
+                    }
+                }
+                if (app[1] >= 'a' and app[1] <= 'z') {
+                    if (app[2] == layout.magicrules.?[app[1] - 'a'][1]) {
+                        app[2] = layout.magicchar;
+                    }
+                }
+                if (app[2] >= 'a' and app[2] <= 'z') {
+                    if (app[3] == layout.magicrules.?[app[2] - 'a'][1]) {
+                        app[3] = layout.magicchar;
+                    }
                 }
             }
-            if (!magicked) {
-                if (trigrams.getPtr(tgrm.word[1..])) |valueptr| {
-                    valueptr.* += tgrm.freq;
-                } else {
-                    try trigrams.put(try allocator.dupe(u8, tgrm.word[1..]), 1);
-                }
+            if (trigrams.getPtr(app[1..])) |valueptr| {
+                valueptr.* += tgrm.freq;
+            } else {
+                try trigrams.put(app[1..], tgrm.freq);
             }
         }
     }
+    const trigramtime = try std.time.Instant.now();
+    std.debug.print("Trigrams time:  {}ns\n", .{trigramtime.since(bigramtime)});
+    const m = try WordCount.FromHashMap(monograms);
+    monograms.deinit();
+    const b = try WordCount.FromHashMap(bigrams);
+    bigrams.deinit();
     const t = try WordCount.FromHashMap(trigrams);
+    const magictime = try std.time.Instant.now();
+    std.debug.print("Total Ngrams time: {}ns\n", .{magictime.since(start)});
     return Ngrams{
         .corpusname = corpusname,
         .monograms = m,
@@ -246,7 +300,8 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
     };
 }
 
-pub fn main() !void {
-    try GenData("e10k", true);
-    try GenData("e200", true);
-}
+// pub fn main() !void {
+//     // try GenData("e10k", true);
+//     // try GenData("e200", true);
+//     try GenData("mr", true);
+// }

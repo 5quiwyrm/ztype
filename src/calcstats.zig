@@ -3,6 +3,7 @@ const loadlayout = @import("loadLayout.zig");
 const parsecorpus = @import("parseCorpus.zig");
 const allocator = std.heap.page_allocator;
 const arraylist = std.ArrayList;
+const time = std.time;
 
 pub fn sortfreqs(_: @TypeOf(.{}), lhs: parsecorpus.WordFreq, rhs: parsecorpus.WordFreq) bool {
     return (lhs.freq < rhs.freq);
@@ -348,8 +349,9 @@ pub const Stats = struct {
         if (self.layout.magicrules != null) {
             std.debug.print("Rules:\n", .{});
             for (self.layout.magicrules.?) |rule| {
-                std.debug.print("{s}\n", .{rule});
+                std.debug.print("{s} ", .{rule});
             }
+            std.debug.print("\n", .{});
         }
         std.debug.print("\nCorpus: {s}\n\nOut of 10000:\n\n", .{self.corpusname});
         std.debug.print("SFB: {} | ", .{@as(i32, @intFromFloat(self.SFBtotal * 10000))});
@@ -370,8 +372,17 @@ pub const Stats = struct {
 };
 
 pub fn main() !void {
-    const layout = try loadlayout.loadLayout("whirl");
-    const grams = try parsecorpus.loadCorpus(layout, "e10k");
+    var argiter = try std.process.argsWithAllocator(allocator);
+    defer argiter.deinit();
+    var layout = try loadlayout.loadLayout("whirl");
+    _ = argiter.next();
+    if (argiter.next()) |val| {
+        layout = try loadlayout.loadLayout(val);
+    }
+    const start = try time.Instant.now();
+    const grams = try parsecorpus.loadCorpus(layout, "mr");
     const stats = try Stats.init(layout, grams);
     try stats.print(.{});
+    const end = try time.Instant.now();
+    std.debug.print("Runtime: {}ns", .{end.since(start)});
 }

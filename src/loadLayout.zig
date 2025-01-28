@@ -16,6 +16,7 @@ pub const Layout = struct {
     rows: []const []const u8,
     fingermap: []const []const u8,
     magicrules: ?[]const MagicRule,
+    repeat: bool = false,
     magicchar: u8,
 
     pub fn save(self: *const Layout, args: SaveOptions) !void {
