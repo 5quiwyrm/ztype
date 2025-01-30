@@ -174,7 +174,7 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
                     }
                 }
             } else {
-                if (mgrm.word[1] == layout.magicrules.?[mgrm.word[0] - 'a'][1] and mgrm.word[0] >= 'a' and mgrm.word[0] <= 'z') {
+                if (mgrm.word[0] >= 'a' and mgrm.word[0] <= 'z' and mgrm.word[1] == layout.magicrules.?[mgrm.word[0] - 'a'][1]) {
                     app[0] = layout.magicchar;
                 }
                 if (monograms.getPtr(app[0..])) |valueptr| {
@@ -300,8 +300,9 @@ pub fn loadCorpus(layout: loadlayout.Layout, corpusname: []const u8) !Ngrams {
     };
 }
 
-// pub fn main() !void {
-//     // try GenData("e10k", true);
-//     // try GenData("e200", true);
-//     try GenData("mr", true);
-// }
+pub fn main() !void {
+    // try GenData("e10k", true);
+    // try GenData("e200", true);
+    // try GenData("mr", true);
+    try GenData("o600", true);
+}

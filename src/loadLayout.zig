@@ -119,7 +119,7 @@ pub const Layout = struct {
 
     pub fn isInroll(self: *const Layout, trigram: []const u8) !bool {
         if (trigram.len != 3) return statError.BadNGramLen;
-        return ((!(try self.isOneh(trigram))) and ((try self.isBigramInroll(trigram[0..2])) or (try self.isBigramInroll(trigram[1..]))));
+        return ((!(try self.isOneh(trigram))) and (((try self.isBigramInroll(trigram[0..2])) and !(try self.isSFB(trigram[0..2]))) or ((try self.isBigramInroll(trigram[1..])) and !(try self.isSFB(trigram[1..])))));
     }
 
     pub fn isIn3roll(self: *const Layout, trigram: []const u8) !bool {
@@ -134,7 +134,7 @@ pub const Layout = struct {
 
     pub fn isOutroll(self: *const Layout, trigram: []const u8) !bool {
         if (trigram.len != 3) return statError.BadNGramLen;
-        return ((!(try self.isOneh(trigram))) and ((try self.isBigramOutroll(trigram[0..2])) or (try self.isBigramOutroll(trigram[1..]))));
+        return ((!(try self.isOneh(trigram))) and (((try self.isBigramOutroll(trigram[0..2])) and !(try self.isSFB(trigram[0..2]))) or ((try self.isBigramOutroll(trigram[1..])) and !(try self.isSFB(trigram[0..2])))));
     }
 
     pub fn isOut3roll(self: *const Layout, trigram: []const u8) !bool {

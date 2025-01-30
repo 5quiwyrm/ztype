@@ -375,14 +375,19 @@ pub fn main() !void {
     var argiter = try std.process.argsWithAllocator(allocator);
     defer argiter.deinit();
     var layout = try loadlayout.loadLayout("whirl");
+    var corpus = try allocator.dupe(u8, "mr");
     _ = argiter.next();
-    if (argiter.next()) |val| {
-        layout = try loadlayout.loadLayout(val);
+    if (argiter.next()) |layoutname| {
+        layout = try loadlayout.loadLayout(layoutname);
+    }
+    if (argiter.next()) |corpusname| {
+        corpus = try allocator.dupe(u8, corpusname);
     }
     const start = try time.Instant.now();
-    const grams = try parsecorpus.loadCorpus(layout, "mr");
+    const grams = try parsecorpus.loadCorpus(layout, corpus);
     const stats = try Stats.init(layout, grams);
     try stats.print(.{});
+    // for (stats.TInR) |t| std.debug.print("{s}: {} | ", .{ t.word, @as(i32, @intFromFloat(t.freq * 10000000)) });
     const end = try time.Instant.now();
     std.debug.print("Runtime: {}ns", .{end.since(start)});
 }
