@@ -1,5 +1,4 @@
 const std = @import("std");
-pub var allocator = std.heap.page_allocator;
 
 pub const SaveOptions = struct {
     overwrite: bool = false,
@@ -19,8 +18,9 @@ pub const Layout = struct {
     repeat: bool = false,
     magicchar: u8,
 
-    pub fn save(self: *const Layout, args: SaveOptions) !void {
+    pub fn save(self: *const Layout, allocator: std.mem.Allocator, args: SaveOptions) !void {
         const layout_path = try allocator.alloc(u8, self.name.len + 5);
+        //     defer allocator.free(layout_path);
         std.mem.copyForwards(u8, layout_path, self.name);
         layout_path[self.name.len] = '.';
         layout_path[self.name.len + 1] = 'j';
@@ -143,11 +143,11 @@ pub const Layout = struct {
     }
 };
 
-pub fn loadLayout(layoutname: []const u8) !Layout {
+pub fn loadLayout(allocator: std.mem.Allocator, layoutname: []const u8) !std.json.Parsed(Layout) {
     var layout_dir = try std.fs.cwd().openDir("layouts", .{});
     defer layout_dir.close();
     const layout_path = try allocator.alloc(u8, layoutname.len + 5);
-    defer allocator.free(layout_path);
+    // defer allocator.free(layout_path);
     std.mem.copyForwards(u8, layout_path, layoutname);
     layout_path[layoutname.len] = '.';
     layout_path[layoutname.len + 1] = 'j';
@@ -164,7 +164,10 @@ pub fn loadLayout(layoutname: []const u8) !Layout {
             return err;
         },
     };
-    return (try std.json.parseFromSlice(Layout, allocator, try layout_file.readToEndAlloc(allocator, 2e6), .{})).value;
+    const read = try layout_file.readToEndAlloc(allocator, 2e6);
+    // defer allocator.free(read);
+    const parsed = try std.json.parseFromSlice(Layout, allocator, read, .{});
+    return parsed;
 }
 
 test "makekuntum" {

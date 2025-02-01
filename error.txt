@@ -1,0 +1,26 @@
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\hash_map.zig:775:44: 0x7ff720fe40e9 in header (calcstats.exe.obj)
+            return @ptrCast(@as([*]Header, @ptrCast(@alignCast(self.metadata.?))) - 1);
+                                           ^
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\hash_map.zig:789:31: 0x7ff720fb9b49 in capacity (calcstats.exe.obj)
+            return self.header().capacity;
+                              ^
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\hash_map.zig:1481:45: 0x7ff720fb8f6f in deallocate (calcstats.exe.obj)
+            const cap: usize = self.capacity();
+                                            ^
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\hash_map.zig:721:28: 0x7ff720f8a111 in deinit (calcstats.exe.obj)
+            self.deallocate(allocator);
+                           ^
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\hash_map.zig:211:34: 0x7ff720f783d5 in deinit (calcstats.exe.obj)
+            self.unmanaged.deinit(self.allocator);
+                                 ^
+~\Documents\GitHub\ztype\src\parseCorpus.zig:202:25: 0x7ff720f7815d in loadCorpus (calcstats.exe.obj)
+    defer bigrams.deinit();
+                        ^
+~\Documents\GitHub\ztype\src\calcstats.zig:389:45: 0x7ff720f84b67 in main (calcstats.exe.obj)
+    const grams = try parsecorpus.loadCorpus(allocator, layout, corpus);
+                                            ^
+~\Documents\zig-windows-x86_64-0.14.0-dev.3008+7cef585f5\lib\std\start.zig:475:53: 0x7ff720f8515f in WinStartup (calcstats.exe.obj)
+    std.os.windows.ntdll.RtlExitUserProcess(callMain());
+                                                    ^
+???:?:?: 0x7ffecc20259c in ??? (KERNEL32.DLL)
+???:?:?: 0x7ffecd34af37 in ??? (ntdll.dll)

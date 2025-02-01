@@ -1,7 +1,6 @@
 const std = @import("std");
 const loadlayout = @import("loadLayout.zig");
 const parsecorpus = @import("parseCorpus.zig");
-const allocator = std.heap.page_allocator;
 const arraylist = std.ArrayList;
 const time = std.time;
 
@@ -16,6 +15,7 @@ pub const StatPrintOptions = struct {
 pub const Stats = struct {
     layout: loadlayout.Layout,
     corpusname: []const u8,
+    allocator: std.mem.Allocator,
 
     SFBtotal: f32,
     SFB: []parsecorpus.WordFreq,
@@ -65,7 +65,7 @@ pub const Stats = struct {
     un_bigram: f32,
     un_trigram: f32,
 
-    pub fn init(givenlayout: loadlayout.Layout, givencorpus: parsecorpus.Ngrams) !Stats {
+    pub fn init(allocator: std.mem.Allocator, givenlayout: loadlayout.Layout, givencorpus: parsecorpus.Ngrams) !Stats {
         var sfblist = arraylist(parsecorpus.WordFreq).init(allocator);
         var sfbtotal: f32 = 0;
         var sfrlist = arraylist(parsecorpus.WordFreq).init(allocator);
@@ -88,7 +88,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (sfbness) {
-                try sfblist.append(token.toWordFreq());
+                try sfblist.append(try token.toWordFreq(allocator));
                 sfbtotal += @floatFromInt(token.freq);
             }
             const sfrness = givenlayout.isSFR(token.word) catch |err| switch (err) {
@@ -97,7 +97,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (sfrness) {
-                try sfrlist.append(token.toWordFreq());
+                try sfrlist.append(try token.toWordFreq(allocator));
                 sfrtotal += @floatFromInt(token.freq);
             }
             const fsbness = givenlayout.isFSB(token.word) catch |err| switch (err) {
@@ -106,7 +106,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (fsbness) {
-                try fsblist.append(token.toWordFreq());
+                try fsblist.append(try token.toWordFreq(allocator));
                 fsbtotal += @floatFromInt(token.freq);
             }
             const hsbness = givenlayout.isHSB(token.word) catch |err| switch (err) {
@@ -115,7 +115,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (hsbness) {
-                try hsblist.append(token.toWordFreq());
+                try hsblist.append(try token.toWordFreq(allocator));
                 hsbtotal += @floatFromInt(token.freq);
             }
             const binness = givenlayout.isBigramInroll(token.word) catch |err| switch (err) {
@@ -124,7 +124,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (binness) {
-                try binlist.append(token.toWordFreq());
+                try binlist.append(try token.toWordFreq(allocator));
                 bintotal += @floatFromInt(token.freq);
             }
             const boutness = givenlayout.isBigramOutroll(token.word) catch |err| switch (err) {
@@ -133,7 +133,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (boutness) {
-                try boutlist.append(token.toWordFreq());
+                try boutlist.append(try token.toWordFreq(allocator));
                 bouttotal += @floatFromInt(token.freq);
             }
             validbigrams += @floatFromInt(token.freq);
@@ -180,7 +180,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (dsfbness) {
-                try dsfblist.append(token.toWordFreq());
+                try dsfblist.append(try token.toWordFreq(allocator));
                 dsfbtotal += @floatFromInt(token.freq);
             }
             const dsfrness = givenlayout.isDSFR(token.word) catch |err| switch (err) {
@@ -189,7 +189,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (dsfrness) {
-                try dsfrlist.append(token.toWordFreq());
+                try dsfrlist.append(try token.toWordFreq(allocator));
                 dsfrtotal += @floatFromInt(token.freq);
             }
             const altness = givenlayout.isAlt(token.word) catch |err| switch (err) {
@@ -198,7 +198,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (altness) {
-                try altlist.append(token.toWordFreq());
+                try altlist.append(try token.toWordFreq(allocator));
                 alttotal += @floatFromInt(token.freq);
             }
             const redness = givenlayout.isRed(token.word) catch |err| switch (err) {
@@ -207,7 +207,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (redness) {
-                try redlist.append(token.toWordFreq());
+                try redlist.append(try token.toWordFreq(allocator));
                 redtotal += @floatFromInt(token.freq);
             }
             const onehness = givenlayout.isOneh(token.word) catch |err| switch (err) {
@@ -216,7 +216,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (onehness) {
-                try onehlist.append(token.toWordFreq());
+                try onehlist.append(try token.toWordFreq(allocator));
                 onehtotal += @floatFromInt(token.freq);
             }
             const inrollness = givenlayout.isInroll(token.word) catch |err| switch (err) {
@@ -225,7 +225,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (inrollness) {
-                try inrolllist.append(token.toWordFreq());
+                try inrolllist.append(try token.toWordFreq(allocator));
                 inrolltotal += @floatFromInt(token.freq);
             }
             const in3rollness = givenlayout.isIn3roll(token.word) catch |err| switch (err) {
@@ -234,7 +234,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (in3rollness) {
-                try in3rolllist.append(token.toWordFreq());
+                try in3rolllist.append(try token.toWordFreq(allocator));
                 in3rolltotal += @floatFromInt(token.freq);
             }
             const outrollness = givenlayout.isOutroll(token.word) catch |err| switch (err) {
@@ -243,7 +243,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (outrollness) {
-                try outrolllist.append(token.toWordFreq());
+                try outrolllist.append(try token.toWordFreq(allocator));
                 outrolltotal += @floatFromInt(token.freq);
             }
             const out3rollness = givenlayout.isOut3roll(token.word) catch |err| switch (err) {
@@ -252,7 +252,7 @@ pub const Stats = struct {
                 else => unreachable,
             };
             if (out3rollness) {
-                try out3rolllist.append(token.toWordFreq());
+                try out3rolllist.append(try token.toWordFreq(allocator));
                 out3rolltotal += @floatFromInt(token.freq);
             }
             validtrigrams += @floatFromInt(token.freq);
@@ -279,6 +279,7 @@ pub const Stats = struct {
         return Stats{
             .layout = givenlayout,
             .corpusname = givencorpus.corpusname,
+            .allocator = allocator,
 
             .SFBtotal = sfbtotal,
             .SFB = try sfblist.toOwnedSlice(),
@@ -369,25 +370,81 @@ pub const Stats = struct {
         std.debug.print("Unaccounted bigrams: {}\n", .{@as(i32, @intFromFloat(self.un_bigram * 10000))});
         std.debug.print("Unaccounted trigrams: {}\n", .{@as(i32, @intFromFloat(self.un_trigram * 10000))});
     }
+
+    // pub fn deinit(self: *Stats) void {
+    // for (self.SFB) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.SFR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.FSB) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.HSB) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.DSFB) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.DSFR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.Red) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.Oneh) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.alt) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.BInR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.TInR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.BOutR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.TOutR) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.In3R) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // for (self.Out3R) |t| {
+    //         self.allocator.free(t.word);
+    // }
+    // }
 };
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer _ = gpa.deinit();
+    const childallocator = gpa.allocator();
+    var arena = std.heap.ArenaAllocator.init(childallocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
     var argiter = try std.process.argsWithAllocator(allocator);
-    defer argiter.deinit();
-    var layout = try loadlayout.loadLayout("whirl");
+    // defer argiter.deinit();
+    var layoutparsed = try loadlayout.loadLayout(allocator, "whirl");
     var corpus = try allocator.dupe(u8, "mr");
     _ = argiter.next();
     if (argiter.next()) |layoutname| {
-        layout = try loadlayout.loadLayout(layoutname);
+        layoutparsed = try loadlayout.loadLayout(allocator, layoutname);
     }
     if (argiter.next()) |corpusname| {
         corpus = try allocator.dupe(u8, corpusname);
     }
     const start = try time.Instant.now();
-    const grams = try parsecorpus.loadCorpus(layout, corpus);
-    const stats = try Stats.init(layout, grams);
+    const grams = try parsecorpus.loadCorpus(allocator, layoutparsed.value, corpus);
+    // defer grams.deinit();
+    var stats = try Stats.init(allocator, layoutparsed.value, grams);
+    // defer stats.deinit();
     try stats.print(.{});
     // for (stats.TInR) |t| std.debug.print("{s}: {} | ", .{ t.word, @as(i32, @intFromFloat(t.freq * 10000000)) });
     const end = try time.Instant.now();
-    std.debug.print("Runtime: {}ns", .{end.since(start)});
+    std.debug.print("Runtime: {}ns\n\n", .{end.since(start)});
 }
