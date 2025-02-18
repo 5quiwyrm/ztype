@@ -421,6 +421,7 @@ pub const Stats = struct {
 };
 
 pub fn main() !void {
+    const start = try time.Instant.now();
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer _ = gpa.deinit();
     const childallocator = gpa.allocator();
@@ -438,7 +439,6 @@ pub fn main() !void {
     if (argiter.next()) |corpusname| {
         corpus = try allocator.dupe(u8, corpusname);
     }
-    const start = try time.Instant.now();
     const grams = try parsecorpus.loadCorpus(allocator, layoutparsed.value, corpus);
     // defer grams.deinit();
     var stats = try Stats.init(allocator, layoutparsed.value, grams);
